@@ -1,0 +1,60 @@
+seed: 0
+dataloaders:
+  _target_: training.build_dataloaders
+  dataset:
+    _target_: dataset.SupervisedGraphDataset
+    data_path: 
+    cmpd_col: smiles
+    cmpd_col_is_inchikey: false
+    pad_length: 500
+  splits:
+    train: 
+    val: 
+    test: 
+  batch_size: 128
+  num_workers: 0
+model:
+  _target_: model.LightningGGNN.load_from_checkpoint
+  _args_:
+  - 
+  strict: false
+  n_edge: 1
+  in_dim: 75
+  n_conv: 6
+  fc_dims:
+  - 1024
+  - 1310
+  p_dropout: 0.1
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 5.0e-05
+trainer:
+  _target_: pytorch_lightning.Trainer
+  gpus: 1
+  num_nodes: 1
+  precision: 32
+  max_epochs: 1000
+  min_epochs: 50
+  check_val_every_n_epoch: 1
+  callbacks:
+  - _target_: pytorch_lightning.callbacks.early_stopping.EarlyStopping
+    monitor: val/auprc
+    mode: max
+    patience: 20
+  - _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: val/auprc
+    mode: max
+    save_top_k: 2
+  logger:
+    _target_: pytorch_lightning.loggers.TensorBoardLogger
+    save_dir: ./models
+    name: finetune
+test_model:
+  _target_: model.LightningGGNN.load_from_checkpoint
+  _args_:
+  - 
+  n_edge: ${model.n_edge}
+  in_dim: ${model.in_dim}
+  n_conv: ${model.n_conv}
+  fc_dims: ${model.fc_dims}
+  p_dropout: ${model.p_dropout}

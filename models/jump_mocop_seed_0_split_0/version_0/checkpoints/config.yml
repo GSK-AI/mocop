@@ -1,0 +1,76 @@
+seed: 0
+dataloaders:
+  _target_: training.build_dataloaders
+  dataset:
+    _target_: dataset.DualInputGraphDatasetJUMP
+    data_path: data/jump/centered.filtered.parquet
+    pad_length: 250
+  splits:
+    train: data/jump/jump-compound-split-0-train.csv
+    val: data/jump/jump-compound-split-0-val.csv
+    test: data/jump/jump-compound-split-0-test.csv
+  batch_size: 256
+  num_workers: 48
+model:
+  _target_: model.DualInputEncoder
+  encoder_a:
+    _target_: model.GatedGraphNeuralNetwork
+    n_edge: 1
+    in_dim: 75
+    n_conv: 6
+    fc_dims:
+    - 1024
+    p_dropout: 0.1
+  encoder_b:
+    _target_: model.MultiLayerPerceptron
+    num_input_features: 3475
+    hidden_layer_dimensions:
+    - 512
+    - 256
+    - 128
+    p_dropout: 0.1
+  supervised_head_dim:
+  - 202
+  non_lin_proj: true
+  dim: 128
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 0.001
+scheduler:
+  _target_: cosine_annealing_warmup.scheduler.CosineAnnealingWarmupRestarts
+  first_cycle_steps: 1000
+  cycle_mult: 1
+  max_lr: 0.001
+  min_lr: 1.0e-08
+  warmup_steps: 50
+scheduler_config:
+  monitor: val/loss
+trainer:
+  _target_: pytorch_lightning.Trainer
+  gpus: 1
+  num_nodes: 1
+  precision: 32
+  max_epochs: 1000
+  min_epochs: 50
+  check_val_every_n_epoch: 2
+  callbacks:
+  - _target_: pytorch_lightning.callbacks.early_stopping.EarlyStopping
+    monitor: val/acc
+    mode: max
+    patience: 500
+  - _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: val/acc
+    mode: max
+    save_top_k: 2
+  logger:
+    _target_: pytorch_lightning.loggers.TensorBoardLogger
+    save_dir: models
+    name: jump_mocop_seed_0_split_0
+test_model:
+  _target_: model.DualInputEncoder
+  encoder_a: ${model.encoder_a}
+  encoder_b: ${model.encoder_b}
+  dim: ${model.dim}
+  supervised_head_dim: ${model.supervised_head_dim}
+  non_lin_proj: ${model.non_lin_proj}
+test_model_ckpt: 

@@ -1,0 +1,4 @@
+{
+    "best_ckpt_path": "models/jump_mocop_seed_2_split_2/version_0/checkpoints/epoch=891-step=352340.ckpt",
+    "best_metric": 0.17019440406976744
+}
